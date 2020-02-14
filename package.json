@@ -1,0 +1,35 @@
+{
+  "name": "githubissuesview",
+  "version": "1.0.0",
+  "description": "Выполнение тестового задания https://docs.google.com/document/d/1aRu2marUZqj2Nyu00GK5Y1-OYWM4I5OexE28SUyZ3LM",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack-dev-server --hot --open",
+    "build": "webpack",
+    "start": "node index.js"
+  },
+  "author": "Trofimov E. S.",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.3",
+    "@babel/preset-env": "^7.8.3",
+    "@babel/preset-react": "^7.8.3",
+    "babel-loader": "^8.0.6",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.10.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/set2333/GitHubIssuesView.git"
+  },
+  "bugs": {
+    "url": "https://github.com/set2333/GitHubIssuesView/issues"
+  },
+  "homepage": "https://github.com/set2333/GitHubIssuesView#readme"
+}
