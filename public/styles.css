@@ -145,12 +145,12 @@ q:after {
 }
 
 /*Тени*/
-.blockSearch, .SearchString button, .repoList, .repoList li, .blockIssue, .listIssues li, .issueInfo {
+.blockSearch, .SearchString button, .repoList, .repoList li, .blockIssue, .listIssues li, .issueInfo, .message {
     box-shadow: 3px 3px 4px black;
 }
 
 /* Радиусы*/
-.blockSearch, .SearchString, .SearchString button, .SearchString input, .repoList, .repoList li, .blockIssue, .listIssues li, .issueInfo {
+.blockSearch, .SearchString, .SearchString button, .SearchString input, .repoList, .repoList li, .blockIssue, .listIssues li, .issueInfo, .message {
     border-radius: 3px;    
 }
 
@@ -233,7 +233,16 @@ q:after {
     padding: 10px;
 }
 
-
+/*Окно сообщения об ошибках*/
+.message {
+    position: absolute;
+    padding: 10px;
+    width: 20vw;
+    margin-left: 40vw;
+    margin-top: 30vh;
+    background: #22A2F2;
+    text-align: center;
+}
 
 
 

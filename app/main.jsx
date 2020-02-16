@@ -1,6 +1,8 @@
 const React = require('react');
 const ReactDOM = require('react-dom');
 
+const cache = new Map();
+
 function niceDate(date) {
     return new Date(date).toLocaleDateString('ru');
 }
@@ -9,12 +11,12 @@ function getDataGitHub(query, mask, cb) {//Получение данных с Gi
     let xhr = new XMLHttpRequest();
         xhr.open('GET', query);
         xhr.onload = ()=>{
-            console.dir(xhr)
+            let data = [];
             if(xhr.status=='200') {
                 let jsonData = JSON.parse(xhr.response);
                 if(!Array.isArray(jsonData))
                     jsonData = [jsonData];
-                let data = jsonData.map((item)=>{//Обработаем каждый объект из массива ответов и вернем массив с полученными объектами
+                data = jsonData.map((item)=>{//Обработаем каждый объект из массива ответов и вернем массив с полученными объектами
                     return mask.reduce((prev, key)=>{//Вернем объект только с нужными нам свойствами
                         let indexObjProp = key.indexOf('.');
                         if(~indexObjProp) {//Если в маске есть позиции с точкой, то это вложенные объекты.
@@ -29,8 +31,8 @@ function getDataGitHub(query, mask, cb) {//Получение данных с Gi
                         return prev;
                     }, {});
                 });
-                cb(data);//Вызовем колбек с получившимся массивом объектов
             }
+            cb(data, xhr.status);//Вызовем колбек с получившимся массивом объектов
         };
         xhr.send();
 }
@@ -50,6 +52,8 @@ function RepoList(props) {//Список репозиториев для доп�
 function SearchString(props) {//Строка поиска с кнопкой
     const [searchString, setSearchString] = React.useState('');
     const [repoList, setrepoList] = React.useState([]);
+    const [error, seterror] = React.useState(null);
+    const [loading, setloading] = React.useState(false);
     
     addRepoName = function(name) {//Дополним строку поиска выбранным в списке репозиторием и поищем issues по нему
         setrepoList([]);//Мы уже выбрали репозиторий, по этому список доступных репозиториев можно очистить
@@ -57,14 +61,28 @@ function SearchString(props) {//Строка поиска с кнопкой
         props.handleClick(name);
     }
     
-    getRepoGitHub = function() {//Получим с GitHub список репозиториев пользователя
+    getRepoGitHub = function(page, userName, arrResults) {//Получим с GitHub список репозиториев пользователя
         let mask = ['name', 'id', 'full_name'];
-        getDataGitHub('https://api.github.com/users/'+searchString+'/repos?page=200', mask, (result)=>{
-            setrepoList(result.map((i)=>{
-                i.visibility=true; 
+        setloading(true);
+        cb = function(result, status) {
+            if(status!==200)
+                return seterror(status + ' Ошибка загрузки списка репозиториев.');
+            let arrFromGitHub = result.map((i, index)=>{//Если список репозиториев большой, покажем первые 10 значений
+                i.visibility= ((page==1) && (index<10)); 
                 return i;
-            }));
-        });//По поводу колбека. К получившимся объектам добавим поле visibility. Нужно для последующей фильтрации списка репозиториев в сторке поиска
+            });
+            arrResults = arrResults.concat(repoList.concat(arrFromGitHub));
+            
+            if(arrFromGitHub.length == 100) {//Если полученно 100 репозиториев, значит есть ещё. Получим их тоже.
+                 getRepoGitHub(page+1, userName, arrResults);
+            }
+            else {
+                cache.set(userName, arrResults);
+                setrepoList(arrResults);
+                setloading(false);
+            }
+        }
+        getDataGitHub('https://api.github.com/users/'+userName+'/repos?per_page=100&page='+page, mask, cb);//По поводу колбека. К получившимся объектам добавим поле visibility. Нужно для последующей фильтрации списка репозиториев в сторке поиска
     }
     
     onChange = function(e) {//Вводим текст в стороку поиска с клавиатуры
@@ -72,7 +90,14 @@ function SearchString(props) {//Строка поиска с кнопкой
         let indRepo = val.indexOf('/'); //индекс символа /
         setSearchString(val);
         if(val[val.length-1] == '/') {//Если введен символ /, значит имя пользователя введено. Поищим его репозитории
-            getRepoGitHub();
+            let userName = val.slice(0, val.length-2);
+            console.log(userName)
+            if(cache.has(userName)){
+                setrepoList(cache.get(userName));
+                setloading(false);
+                return;
+            }
+            getRepoGitHub(1, userName, []);
         }
         if(!~indRepo) {//Если в строке нет символа / список репозиториев не нужен. Уберем его
             setrepoList([]);
@@ -85,8 +110,16 @@ function SearchString(props) {//Строка поиска с кнопкой
             }));
         }
     }
+    
+    closeMessage = function() {
+        seterror(null);
+        setloading(false);
+    }
+    
     return(
         <div className='SearchString'>
+            <Message close={closeMessage}>{error}</Message>
+            <Loading visibility={loading} />
             <input onChange={onChange} value={searchString}></input>
             <button onClick={()=>{setrepoList([]); props.handleClick.call(this, searchString)}}>Поиск</button>
             <RepoList handleClick={addRepoName}>{repoList}</RepoList>
@@ -131,25 +164,40 @@ class App extends React.Component {//Главный компонент. Точк
         super(props);
         this.state = {
             issues:[],
-            currentIssue:null
+            currentIssue:null, 
+            error:null
         };
         this.getIssuesGitHub = this.getIssuesGitHub.bind(this);
         this.getOneIssueGitHub = this.getOneIssueGitHub.bind(this);
+        this.closeMessage = this.closeMessage.bind(this);
     }
     
     getIssuesGitHub(data) {//Получение данных с GitHub со списком Issues
         let mask = ['number', 'title', 'created_at', 'url'];
-        getDataGitHub('https://api.github.com/repos/'+data+'/issues', mask, (result)=>{this.setState({issues:result})});
+        getDataGitHub('https://api.github.com/repos/'+data+'/issues', mask, (result, status)=>{
+            if(status!==200)
+                return this.setState({error: status + ' Ошибка загрузки списка issues.'});
+            this.setState({issues:result})
+        });
     }
     
     getOneIssueGitHub(data) {//Получим детальную информацию по одному issues с GitHub
         let mask = ['number', 'title', 'created_at', 'body', 'state', 'updated_at', 'user.login', 'user.html_url', 'user.avatar_url'];
-        getDataGitHub(data, mask, (result)=>{this.setState({currentIssue:result[0]})});
+        getDataGitHub(data, mask, (result, status)=>{
+            if(status!==200)
+                return this.setState({error: status + ' Ошибка загрузки issue.'});
+            this.setState({currentIssue:result[0]})
+        });
+    }
+    
+    closeMessage() {
+        this.setState({error:null});
     }
     
     render() {
         return(
             <React.Fragment>
+                <Message close={this.closeMessage}>{this.state.error}</Message>
                 <div className='blockSearch'>
                     <SearchString handleClick={this.getIssuesGitHub}/>
                     <ListIssues handleClick={this.getOneIssueGitHub} issues={this.state.issues} />
@@ -162,6 +210,28 @@ class App extends React.Component {//Главный компонент. Точк
         );
     }
 } 
+
+class Message extends React.Component {//Сообщение. Используется для уведомления об ошибках
+    render() {
+        if (this.props.children)
+            return (
+                ReactDOM.createPortal(
+                    <div className='message'>
+                        <h1>{this.props.children}</h1>
+                        <button onClick={this.props.close}>OK</button>
+                    </div>,
+                document.querySelector('body'))
+            );
+        return null;
+    }
+    
+}
+
+function Loading(props) {//Индикатор загрузки
+    if (props.visibility) 
+        return <p>Загрузка</p>
+    return null;    
+}
 
 ReactDOM.render(
   <App />,
