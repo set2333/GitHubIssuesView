@@ -90,8 +90,7 @@ function SearchString(props) {//Строка поиска с кнопкой
         let indRepo = val.indexOf('/'); //индекс символа /
         setSearchString(val);
         if(val[val.length-1] == '/') {//Если введен символ /, значит имя пользователя введено. Поищим его репозитории
-            let userName = val.slice(0, val.length-2);
-            console.log(userName)
+            let userName = val.slice(0, val.length-1);
             if(cache.has(userName)){
                 setrepoList(cache.get(userName));
                 setloading(false);
@@ -119,7 +118,7 @@ function SearchString(props) {//Строка поиска с кнопкой
     return(
         <div className='SearchString'>
             <Message close={closeMessage}>{error}</Message>
-            <Loading visibility={loading} />
+            {loading && <Loading />}
             <input onChange={onChange} value={searchString}></input>
             <button onClick={()=>{setrepoList([]); props.handleClick.call(this, searchString)}}>Поиск</button>
             <RepoList handleClick={addRepoName}>{repoList}</RepoList>
@@ -227,10 +226,32 @@ class Message extends React.Component {//Сообщение. Используе�
     
 }
 
-function Loading(props) {//Индикатор загрузки
-    if (props.visibility) 
-        return <p>Загрузка</p>
-    return null;    
+class Loading extends React.Component {//Индикатор загрузки
+    constructor(props) {
+        super(props);
+        this.state = {
+            indicator: '',
+            idInterval:null
+        }
+    }
+    
+    componentDidMount() {//Запустим таймер для индикации загрузки
+        if(this.state.idInterval===null) {
+            let idInterval = setInterval(()=>this.setState({indicator:(this.state.indicator.length<3)?this.state.indicator + '.':''}), 1000);
+            this.setState({idInterval:idInterval});
+        }
+    }
+    
+    componentWillUnmount() {//Индикатор загрузки больше не нужен. Удалим таймер
+        if(this.state.idInterval) {
+            clearInterval(this.state.idInterval);
+        }
+    }
+    
+    render() {
+        return <p className="loading">Загрузка{this.state.indicator}</p>
+    }
+        
 }
 
 ReactDOM.render(
