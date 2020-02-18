@@ -9,7 +9,11 @@ function niceDate(date) {
 
 function getDataGitHub(query, mask, cb) {//Получение данных с GitHub. query - строка запроса, mask - массив с названиями свойств. Т.к. мы получаем ответ в виде объекта у которого очень много свойств, мы скопируем только нужные нам свойства из этого ответа, cb - функция обратного вызова. В ней мы можем устанавливать наши состояния.
     let xhr = new XMLHttpRequest();
-        xhr.open('GET', query);
+        console.log(query.slice(0, query.indexOf('?')));
+        console.log(query.slice(query.indexOf('?')));
+    xhr.open('GET', query);
+//        xhr.open('GET', query.slice(0, query.indexOf('?')));
+//        xhr.link = query.slice(query.indexOf('?'));
         xhr.onload = ()=>{
             let data = [];
             if(xhr.status=='200') {
