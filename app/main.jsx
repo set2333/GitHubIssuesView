@@ -9,11 +9,7 @@ function niceDate(date) {
 
 function getDataGitHub(query, mask, cb) {//Получение данных с GitHub. query - строка запроса, mask - массив с названиями свойств. Т.к. мы получаем ответ в виде объекта у которого очень много свойств, мы скопируем только нужные нам свойства из этого ответа, cb - функция обратного вызова. В ней мы можем устанавливать наши состояния.
     let xhr = new XMLHttpRequest();
-        console.log(query.slice(0, query.indexOf('?')));
-        console.log(query.slice(query.indexOf('?')));
-    xhr.open('GET', query);
-//        xhr.open('GET', query.slice(0, query.indexOf('?')));
-//        xhr.link = query.slice(query.indexOf('?'));
+        xhr.open('GET', query);
         xhr.onload = ()=>{
             let data = [];
             if(xhr.status=='200') {
@@ -65,28 +61,39 @@ function SearchString(props) {//Строка поиска с кнопкой
         props.handleClick(name);
     }
     
-    getRepoGitHub = function(page, userName, arrResults) {//Получим с GitHub список репозиториев пользователя
+    getRepoGitHub = function(page, userName, size) {//Получим с GitHub список репозиториев пользователя
         let mask = ['name', 'id', 'full_name'];
-        setloading(true);
         cb = function(result, status) {
             if(status!==200)
                 return seterror(status + ' Ошибка загрузки списка репозиториев.');
             let arrFromGitHub = result.map((i, index)=>{//Если список репозиториев большой, покажем первые 10 значений
-                i.visibility= ((page==1) && (index<10)); 
+                i.visibility= true;
                 return i;
             });
-            arrResults = arrResults.concat(repoList.concat(arrFromGitHub));
-            
-            if(arrFromGitHub.length == 100) {//Если полученно 100 репозиториев, значит есть ещё. Получим их тоже.
-                 getRepoGitHub(page+1, userName, arrResults);
-            }
-            else {
-                cache.set(userName, arrResults);
-                setrepoList(arrResults);
+            if (cache.get(userName))
+                cache.set(userName, cache.get(userName).concat(result));
+            else
+                cache.set(userName, result);
+            if(cache.get(userName).length == size) {//Если получили все репозитории отобразим их.
+                setrepoList(cache.get(userName));
                 setloading(false);
             }
         }
-        getDataGitHub('https://api.github.com/users/'+userName+'/repos?per_page=100&page='+page, mask, cb);//По поводу колбека. К получившимся объектам добавим поле visibility. Нужно для последующей фильтрации списка репозиториев в сторке поиска
+        getDataGitHub('https://api.github.com/users/'+userName+'/repos?per_page=100&page='+page, mask, cb);
+    }
+    
+    getRepoCountGitHub = function(userName) {
+        setloading(true);
+        let mask = ['public_repos'];
+        cb = function(result, status) {
+            if(status!==200)
+                return seterror(status + ' Ошибка получения пользователя.');
+            let size = Math.ceil(result[0].public_repos/100);
+            for(let i=1; i<size+1;i++) {
+                getRepoGitHub(i, userName, result[0].public_repos);
+            }
+        };
+        getDataGitHub('https://api.github.com/users/'+userName, mask, cb);
     }
     
     onChange = function(e) {//Вводим текст в стороку поиска с клавиатуры
@@ -100,7 +107,8 @@ function SearchString(props) {//Строка поиска с кнопкой
                 setloading(false);
                 return;
             }
-            getRepoGitHub(1, userName, []);
+//            getRepoGitHub(1, userName, []);
+            getRepoCountGitHub(userName);
         }
         if(!~indRepo) {//Если в строке нет символа / список репозиториев не нужен. Уберем его
             setrepoList([]);
