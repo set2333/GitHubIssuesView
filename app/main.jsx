@@ -1,17 +1,20 @@
 const React = require('react');
 const ReactDOM = require('react-dom');
 
-const cache = new Map();
+const cache = new Map();//Кэш. Если мы один раз загрузили список репозиториев, то для ускорения работы и для экономии лимитов на запросы к GitHab, закэшируем данные по пользователю.
+const sicretKey = 'c2V0MjMzMzo1YTRmNmZkOTcyNjlmM2IzODk3OThjYWU3OWYwMjE1MmJhNjllOWIw';//Для неавторизованного пользователя GitHub позволяет делать только 60 запросов в час, а для авторизованных 5000 запросов. Если не авторизоватся (sicretKey = null), при привышении лимита GitHub возвращает ошибку 403. Ключ личный, просьба не тырить:-)
 
-function niceDate(date) {
+function niceDate(date) {//Дата в красивом формате
     return new Date(date).toLocaleDateString('ru');
 }
 
 function getDataGitHub(query, mask, cb) {//Получение данных с GitHub. query - строка запроса, mask - массив с названиями свойств. Т.к. мы получаем ответ в виде объекта у которого очень много свойств, мы скопируем только нужные нам свойства из этого ответа, cb - функция обратного вызова. В ней мы можем устанавливать наши состояния.
     let xhr = new XMLHttpRequest();
         xhr.open('GET', query);
+        if (sicretKey)
+            xhr.setRequestHeader('Authorization', 'Basic '+sicretKey); 
         xhr.onload = ()=>{
-            let data = [];
+            let data = [];//Массив с результатами.
             if(xhr.status=='200') {
                 let jsonData = JSON.parse(xhr.response);
                 if(!Array.isArray(jsonData))
@@ -32,7 +35,7 @@ function getDataGitHub(query, mask, cb) {//Получение данных с Gi
                     }, {});
                 });
             }
-            cb(data, xhr.status);//Вызовем колбек с получившимся массивом объектов
+            cb(data, xhr.status);//Вызовем колбек с получившимся массивом объектов и статусом ответа
         };
         xhr.send();
 }
@@ -40,10 +43,8 @@ function getDataGitHub(query, mask, cb) {//Получение данных с Gi
 function RepoList(props) {//Список репозиториев для дополнения строки поиска
     return(
         <ul className={(props.children.length)? 'repoList':'hidenBlock'}>
-            {props.children.map((item)=>{
-                if(item.visibility)//в слачае фильтрации покажем только нужные issues
-                    return(<li onClick={props.handleClick.bind(this, item.full_name)} key={item.id}>{item.name}</li>);
-                return null;
+            {props.children.map((item)=>{//в слачае фильтрации покажем только нужные issues
+                return (item.visibility)?<li onClick={props.handleClick.bind(this, item.full_name)} key={item.id}>{item.name}</li>:null;
             })}
         </ul>
     );
@@ -82,11 +83,11 @@ function SearchString(props) {//Строка поиска с кнопкой
         getDataGitHub('https://api.github.com/users/'+userName+'/repos?per_page=100&page='+page, mask, cb);
     }
     
-    getRepoCountGitHub = function(userName) {
+    getRepoCountGitHub = function(userName) {//Получим количество репозиториев пользователя
         setloading(true);
         let mask = ['public_repos'];
         cb = function(result, status) {
-            if(status!==200)
+            if(status!==200 || result[0].public_repos == null)
                 return seterror(status + ' Ошибка получения пользователя.');
             let size = Math.ceil(result[0].public_repos/100);
             for(let i=1; i<size+1;i++) {
@@ -107,7 +108,6 @@ function SearchString(props) {//Строка поиска с кнопкой
                 setloading(false);
                 return;
             }
-//            getRepoGitHub(1, userName, []);
             getRepoCountGitHub(userName);
         }
         if(!~indRepo) {//Если в строке нет символа / список репозиториев не нужен. Уберем его
@@ -122,7 +122,7 @@ function SearchString(props) {//Строка поиска с кнопкой
         }
     }
     
-    closeMessage = function() {
+    closeMessage = function() {//Закроем окно с ошибкой
         seterror(null);
         setloading(false);
     }
@@ -155,19 +155,56 @@ function IssuePage(props) {//Страница с детальной информ
         );
     return(
         <React.Fragment>
-          <div>
-              <div className='issueInfo'>
-                  <p><img className='avatarImg' src={props.issue.user.avatar_url} alt={props.issue.user.login}/> <a href={props.issue.user.html_url}>{props.issue.user.login}</a></p>
-                  <p>№:{props.issue.number}</p>
-                  <p>Статус: {props.issue.state}</p>
-                  <p>Созданно: {niceDate(props.issue.created_at)}</p>
-                  <p>Обновленно: {niceDate(props.issue.updated_at)}</p>
-              </div>
-                  <h1>{props.issue.title}</h1>
-                  <p>{props.issue.body}</p>
+          <div className='issueInfo'>
+              <p><img className='avatarImg' src={props.issue.user.avatar_url} alt={props.issue.user.login}/> <a href={props.issue.user.html_url}>{props.issue.user.login}</a></p>
+              <p>№:{props.issue.number}</p>
+              <p>Статус: {props.issue.state}</p>
+              <p>Созданно: {niceDate(props.issue.created_at)}</p>
+              <p>Обновленно: {niceDate(props.issue.updated_at)}</p>
           </div>
+          <h1>{props.issue.title}</h1>
+          <p>{props.issue.body}</p>
         </React.Fragment>
     );
+}
+
+class Loading extends React.Component {//Индикатор загрузки
+    constructor(props) {
+        super(props);
+        this.state = {
+            indicator: '',
+            idInterval:null
+        }
+    }
+    
+    componentDidMount() {//Запустим таймер для индикации загрузки
+        if(this.state.idInterval===null) 
+            this.setState({idInterval:setInterval(()=>this.setState({indicator:(this.state.indicator.length<3)?this.state.indicator + '.':''}), 1000)});
+    }
+    
+    componentWillUnmount() {//Индикатор загрузки больше не нужен. Удалим таймер
+        if(this.state.idInterval) 
+            clearInterval(this.state.idInterval);
+    }
+    
+    render() {
+        return <p className="loading">Загрузка{this.state.indicator}</p>
+    }
+        
+}
+
+class Message extends React.Component {//Сообщение. Используется для уведомления об ошибках
+    render() {
+        if (this.props.children)
+            return (
+                ReactDOM.createPortal(
+                    <div className='message'>
+                        <h1>{this.props.children}</h1>
+                        <button onClick={this.props.close}>OK</button>
+                    </div>, document.querySelector('body')));
+        return null;
+    }
+    
 }
 
 class App extends React.Component {//Главный компонент. Точка входа
@@ -201,7 +238,7 @@ class App extends React.Component {//Главный компонент. Точк
         });
     }
     
-    closeMessage() {
+    closeMessage() {//Закроем окно с ошибкой
         this.setState({error:null});
     }
     
@@ -221,50 +258,6 @@ class App extends React.Component {//Главный компонент. Точк
         );
     }
 } 
-
-class Message extends React.Component {//Сообщение. Используется для уведомления об ошибках
-    render() {
-        if (this.props.children)
-            return (
-                ReactDOM.createPortal(
-                    <div className='message'>
-                        <h1>{this.props.children}</h1>
-                        <button onClick={this.props.close}>OK</button>
-                    </div>,
-                document.querySelector('body'))
-            );
-        return null;
-    }
-    
-}
-
-class Loading extends React.Component {//Индикатор загрузки
-    constructor(props) {
-        super(props);
-        this.state = {
-            indicator: '',
-            idInterval:null
-        }
-    }
-    
-    componentDidMount() {//Запустим таймер для индикации загрузки
-        if(this.state.idInterval===null) {
-            let idInterval = setInterval(()=>this.setState({indicator:(this.state.indicator.length<3)?this.state.indicator + '.':''}), 1000);
-            this.setState({idInterval:idInterval});
-        }
-    }
-    
-    componentWillUnmount() {//Индикатор загрузки больше не нужен. Удалим таймер
-        if(this.state.idInterval) {
-            clearInterval(this.state.idInterval);
-        }
-    }
-    
-    render() {
-        return <p className="loading">Загрузка{this.state.indicator}</p>
-    }
-        
-}
 
 ReactDOM.render(
   <App />,
