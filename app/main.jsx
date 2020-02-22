@@ -6,7 +6,7 @@ const sicretKey = 'c2V0MjMzMzo1YTRmNmZkOTcyNjlmM2IzODk3OThjYWU3OWYwMjE1MmJhNjllO
 
 function niceDate(date) {//Дата в красивом формате
     return new Date(date).toLocaleDateString('ru');
-}
+}//niceDate(date)
 
 function getDataGitHub(query, mask, cb) {//Получение данных с GitHub. query - строка запроса, mask - массив с названиями свойств. Т.к. мы получаем ответ в виде объекта у которого очень много свойств, мы скопируем только нужные нам свойства из этого ответа, cb - функция обратного вызова. В ней мы можем устанавливать наши состояния.
     let xhr = new XMLHttpRequest();
@@ -16,29 +16,34 @@ function getDataGitHub(query, mask, cb) {//Получение данных с Gi
         xhr.onload = ()=>{
             let data = [];//Массив с результатами.
             if(xhr.status=='200') {
-                let jsonData = JSON.parse(xhr.response);
-                if(!Array.isArray(jsonData))
+                try{
+                  let jsonData = JSON.parse(xhr.response);
+                  if(!Array.isArray(jsonData))//jsonData бывает массив, а бывает и нет. Если нет приведу к массиву, для последующего однообразия обработки
                     jsonData = [jsonData];
-                data = jsonData.map((item)=>{//Обработаем каждый объект из массива ответов и вернем массив с полученными объектами
-                    return mask.reduce((prev, key)=>{//Вернем объект только с нужными нам свойствами
-                        let indexObjProp = key.indexOf('.');
-                        if(~indexObjProp) {//Если в маске есть позиции с точкой, то это вложенные объекты.
-                            let obj = key.slice(0, indexObjProp);//Название подобъекта
-                            let prop = key.slice(indexObjProp+1);//Свойство подобъекта
-                            if(!prev[obj])
-                                prev[obj] = {};
-                            prev[obj][prop] = (!item[obj][prop])?null:item[obj][prop];
-                        }
-                        else
-                            prev[key] = (!item[key])?null:item[key];//Если в ответе нет нужного свойства установим свойство в null
-                        return prev;
+                  data = jsonData.map((item)=>{//Обработаем каждый объект из массива ответов и вернем массив с полученными объектами
+                     return mask.reduce((prev, key)=>{//Вернем объект только с нужными нам свойствами
+                      let indexObjProp = key.indexOf('.');
+                      if(~indexObjProp) {//Если в маске есть позиции с точкой, то это вложенные объекты.
+                          let obj = key.slice(0, indexObjProp);//Название подобъекта
+                          let prop = key.slice(indexObjProp+1);//Свойство подобъекта
+                          if(!prev[obj])
+                              prev[obj] = {};
+                          prev[obj][prop] = (!item[obj][prop])?null:item[obj][prop];
+                      }
+                      else
+                          prev[key] = (!item[key])?null:item[key];//Если в ответе нет нужного свойства установим свойство в null
+                      return prev;
                     }, {});
-                });
+                  });
+                }
+                catch(e) {
+                  return cb([], 'JSON Error');
+                }
             }
             cb(data, xhr.status);//Вызовем колбек с получившимся массивом объектов и статусом ответа
         };
         xhr.send();
-}
+}//getDataGitHub(query, mask, cb)
 
 function RepoList(props) {//Список репозиториев для дополнения строки поиска
     return(
@@ -48,13 +53,13 @@ function RepoList(props) {//Список репозиториев для доп�
             })}
         </ul>
     );
-}
+}//RepoList(props)
 
 function SearchString(props) {//Строка поиска с кнопкой
-    const [searchString, setSearchString] = React.useState('');
-    const [repoList, setrepoList] = React.useState([]);
-    const [error, seterror] = React.useState(null);
-    const [loading, setloading] = React.useState(false);
+    const [searchString, setSearchString] = React.useState('');//Строка поиска
+    const [repoList, setrepoList] = React.useState([]);//Список репозиториев для всплывающей подсказки
+    const [error, seterror] = React.useState(null);//Сообщение об ошибке
+    const [loading, setloading] = React.useState(false);//Индикатор загрузки
     
     addRepoName = function(name) {//Дополним строку поиска выбранным в списке репозиторием и поищем issues по нему
         setrepoList([]);//Мы уже выбрали репозиторий, по этому список доступных репозиториев можно очистить
@@ -67,7 +72,7 @@ function SearchString(props) {//Строка поиска с кнопкой
         cb = function(result, status) {
             if(status!==200)
                 return seterror(status + ' Ошибка загрузки списка репозиториев.');
-            let arrFromGitHub = result.map((i, index)=>{//Если список репозиториев большой, покажем первые 10 значений
+            let arrFromGitHub = result.map((i)=>{//visibility флаг показа репозитория. Покажем все.
                 i.visibility= true;
                 return i;
             });
@@ -89,10 +94,8 @@ function SearchString(props) {//Строка поиска с кнопкой
         cb = function(result, status) {
             if(status!==200 || result[0].public_repos == null)
                 return seterror(status + ' Ошибка получения пользователя.');
-            let size = Math.ceil(result[0].public_repos/100);
-            for(let i=1; i<size+1;i++) {
+            for(let i=1; i<Math.ceil(result[0].public_repos/100)+1;i++) 
                 getRepoGitHub(i, userName, result[0].public_repos);
-            }
         };
         getDataGitHub('https://api.github.com/users/'+userName, mask, cb);
     }
@@ -105,14 +108,12 @@ function SearchString(props) {//Строка поиска с кнопкой
             let userName = val.slice(0, val.length-1);
             if(cache.has(userName)){
                 setrepoList(cache.get(userName));
-                setloading(false);
-                return;
+                return setloading(false);
             }
             getRepoCountGitHub(userName);
         }
-        if(!~indRepo) {//Если в строке нет символа / список репозиториев не нужен. Уберем его
+        if(!~indRepo) //Если в строке нет символа / список репозиториев не нужен. Уберем его
             setrepoList([]);
-        }
         else {//Введены какие-то символы после /. Отфильтруем список репозиториев
             setrepoList(repoList.map((i)=>{
                 let repoName = val.slice(indRepo+1).toLowerCase();//имя репозитория. Поиск будем производить без учета регистра
@@ -136,7 +137,7 @@ function SearchString(props) {//Строка поиска с кнопкой
             <RepoList handleClick={addRepoName}>{repoList}</RepoList>
         </div>
     );
-}
+}//SearchString(props)
 
 function ListIssues(props) {//Список Issues
     return(
@@ -146,13 +147,11 @@ function ListIssues(props) {//Список Issues
              })}
         </ul>
     );
-}
+}//ListIssues(props)
 
 function IssuePage(props) {//Страница с детальной информацией
     if(props.issue === null)
-        return(
-            <p>Введите название репозитория в поле поиска в формате: <b>Имя_пользователя/Название_репозитория</b></p>
-        );
+        return(<p>Введите название репозитория в поле поиска в формате: <b>Имя/Название_репозитория</b></p>);
     return(
         <React.Fragment>
           <div className='issueInfo'>
@@ -166,14 +165,14 @@ function IssuePage(props) {//Страница с детальной информ
           <p>{props.issue.body}</p>
         </React.Fragment>
     );
-}
+}//IssuePage(props)
 
 class Loading extends React.Component {//Индикатор загрузки
     constructor(props) {
         super(props);
         this.state = {
-            indicator: '',
-            idInterval:null
+            indicator: '',//строка после слова Загрузка. От 0 до 3 точек
+            idInterval:null//id интервала для его отмены при необходимости
         }
     }
     
@@ -190,8 +189,7 @@ class Loading extends React.Component {//Индикатор загрузки
     render() {
         return <p className="loading">Загрузка{this.state.indicator}</p>
     }
-        
-}
+}//Loading
 
 class Message extends React.Component {//Сообщение. Используется для уведомления об ошибках
     render() {
@@ -204,8 +202,7 @@ class Message extends React.Component {//Сообщение. Используе�
                     </div>, document.querySelector('body')));
         return null;
     }
-    
-}
+}//Message
 
 class App extends React.Component {//Главный компонент. Точка входа
     constructor(props) {
@@ -254,12 +251,8 @@ class App extends React.Component {//Главный компонент. Точк
                     <IssuePage issue={this.state.currentIssue}/>
                 </div>
             </React.Fragment>
-            
         );
     }
-} 
+}//App 
 
-ReactDOM.render(
-  <App />,
-  document.getElementById('main')
-);
+ReactDOM.render(<App />, document.getElementById('main'));
