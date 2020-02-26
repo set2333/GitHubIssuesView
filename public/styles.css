@@ -3,86 +3,7 @@
     box-sizing: border-box;
 }
 
-html,
-body,
-div,
-span,
-object,
-iframe,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p,
-blockquote,
-pre,
-a,
-abbr,
-acronym,
-address,
-big,
-cite,
-code,
-del,
-dfn,
-em,
-img,
-ins,
-kbd,
-q,
-s,
-samp,
-small,
-strike,
-strong,
-sub,
-sup,
-tt,
-var,
-b,
-u,
-i,
-center,
-dl,
-dt,
-dd,
-ol,
-ul,
-li,
-fieldset,
-form,
-label,
-legend,
-table,
-caption,
-tbody,
-tfoot,
-thead,
-tr,
-th,
-td,
-article,
-aside,
-canvas,
-details,
-embed,
-figure,
-figcaption,
-footer,
-header,
-hgroup,
-menu,
-nav,
-output,
-ruby,
-section,
-summary,
-time,
-mark,
-audio,
-video {
+html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
     margin: 0;
     padding: 0;
     border: 0;
@@ -90,17 +11,7 @@ video {
     vertical-align: baseline;
 }
 
-article,
-aside,
-details,
-figcaption,
-figure,
-footer,
-header,
-hgroup,
-menu,
-nav,
-section {
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
     display: block;
 }
 
@@ -123,15 +34,11 @@ ul {
     list-style: none;
 }
 
-blockquote,
-q {
+blockquote, q {
     quotes: none;
 }
 
-blockquote:before,
-blockquote:after,
-q:before,
-q:after {
+blockquote:before, blockquote:after, q:before, q:after {
     content: '';
     content: none;
 }
@@ -163,6 +70,7 @@ q:after {
     float: right;
 }
 
+/*окошечко с описание Issue*/
 .issueInfo {
     width: 220px;
     text-align: left;
@@ -172,6 +80,7 @@ q:after {
     margin-bottom:10px;
 }
 
+/*блок поиска. Строка поиска и найденные issues*/
 .blockSearch {
     width: 220px;
     background: #B3B134;
@@ -179,7 +88,7 @@ q:after {
     margin: 10px;
     margin-top: 20px;
 }
-
+/*страница и подробным описание issue*/
 .blockIssue {
     width: 720px;
     text-align: center;
@@ -187,11 +96,11 @@ q:after {
     padding: 20px;
     margin-top: 20px;
 }
-
+/*невидимый блок*/
 .hidenBlock {
     visibility: hidden;
 }
-
+/*строка поиска*/
 .SearchString {
     text-align: center;
     margin: 10px;
@@ -201,7 +110,7 @@ q:after {
     margin: 10px;
     width: 160px;
 }
-
+/*список найденных репозиториев*/
 .repoList {
     visibility: visible;
 /*    position: absolute;*/
@@ -222,12 +131,12 @@ q:after {
 .repoList li:active, .listIssues li:active {
     box-shadow: 2px 2px 2px black inset;
 }
-
+/*аватарка пользователя*/
 .avatarImg {
     width: 40px;
     height: 40px;
 }
-
+/*список issues*/
 .listIssues {
     padding: 10px;
 }
@@ -245,8 +154,11 @@ q:after {
 
 /*Индикатор загрузки*/
 .loading {
-    text-align: left;
-    margin-left: 10px;
+  display:inline-block;
+  width:20px;
+  height:20px;
+  background: url('https://faviconer.net/preloaders/770/%D0%97%D0%B0%D0%BF%D0%BE%D0%BB%D0%BD%D1%8F%D1%8E%D1%89%D0%B5%D0%B5%D1%81%D1%8F%20%D1%80%D0%B0%D0%B7%D0%B1%D0%B8%D1%82%D0%BE%D0%B5%20%D0%BA%D0%BE%D0%BB%D0%B5%D1%81%D0%BE.gif');
+  background-size: cover;
 }
 
 @media (min-width:760px) and (max-width:959px) {
@@ -314,13 +226,3 @@ q:after {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
